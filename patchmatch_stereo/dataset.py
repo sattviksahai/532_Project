@@ -27,15 +27,15 @@ class Dataset:
         return pmat_df
     
     def get_intrinsics(self, scene):
-        cameras_df = pd.DataFrame(columns=['name', 'intrinsics']) # should i be keeping the intrinsics separate? 
+        intrinsics_df = pd.DataFrame(columns=['name', 'intrinsics']) # should i be keeping the intrinsics separate? 
         for image_name in os.listdir(os.path.join(self.data_path, scene, 'cameras')):
             with open(os.path.join(self.data_path, scene, 'cameras', image_name), "r") as f:
                 contents = f.read()
                 elements = contents.split()
-                cameras_df = cameras_df.append({'name': image_name[:-7],
+                intrinsics_df = intrinsics_df.append({'name': image_name[:-7],
                                                 'intrinsics': np.array([float(x) for x in elements[0:9]]).reshape((3,3))}, ignore_index=True)
                 f.close()
-        return cameras_df
+        return intrinsics_df
 
 
 if __name__ == "__main__":
@@ -44,7 +44,6 @@ if __name__ == "__main__":
 
     intrinsics = mvs_dataset.get_intrinsics('fountain')
     print(intrinsics)
-
 
     entry_images = mvs_dataset.get_images('entry')
     print(entry_images.head())
