@@ -25,6 +25,8 @@ class Dataset:
                                     'pmat': np.array([float(x) for x in contents.split()]).reshape((3,4))}, ignore_index=True)
             f.close()
         return pmat_df
+    
+    def get_intrinsics(self, scene):
 
 if __name__ == "__main__":
     data_path = "data/"
