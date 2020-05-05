@@ -8,12 +8,13 @@ class Dataset:
         self.data_path = data_path
         self.scenes = os.listdir(self.data_path)
         print("Detected the following scenes: ", self.scenes)
+        print("TODO: remove image resizing from Dataset")
 
     def get_images(self, scene):
         images_df = pd.DataFrame(columns=['name', 'image'])
         for image_name in os.listdir(os.path.join(self.data_path, scene, 'images')):
             images_df = images_df.append({'name': image_name,
-                                        'image': cv2.imread(os.path.join(self.data_path, scene, 'images', image_name))}, ignore_index=True)
+                                        'image': cv2.resize(cv2.imread(os.path.join(self.data_path, scene, 'images', image_name)), None,fx=0.1,fy=0.1)}, ignore_index=True)
         return images_df
     
     def get_p_matrices(self, scene):
