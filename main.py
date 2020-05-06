@@ -11,4 +11,4 @@ if __name__ == "__main__":
 
     pm_fountain = PatchMatch(f_images, f_p_mats, f_intrinsics)
 
-    # pm_fountain.run_iteration()
+    pm_fountain.run(10)

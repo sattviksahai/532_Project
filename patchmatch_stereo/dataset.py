@@ -39,6 +39,11 @@ class Dataset:
                 f.close()
         return intrinsics_df
 
+#add fucntion get extrinsics
+
+# modify get_p_matrices to compute from instrinsics and extrinsics
+
+
 
 if __name__ == "__main__":
     data_path = "data/"

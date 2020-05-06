@@ -31,6 +31,8 @@ class PatchMatch:
         return self.other_img, self.other_p_mat
 
     def project_to(self, loc, pmat, depth):
+
+        print("TODO: check if its correct to use K and then also f/Z")
         """"""
         x = np.dot(self.ref_k, loc)
         x = x/x[2]
