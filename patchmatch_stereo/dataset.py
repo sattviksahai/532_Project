@@ -7,6 +7,7 @@ class Dataset:
     def __init__(self, data_path):
         self.data_path = data_path
         self.scenes = os.listdir(self.data_path)
+        self.img_scale_factor = 0.2
         print("Detected the following scenes: ", self.scenes)
         print("TODO: remove image resizing from Dataset")
 
@@ -14,7 +15,7 @@ class Dataset:
         images_df = pd.DataFrame(columns=['name', 'image'])
         for image_name in os.listdir(os.path.join(self.data_path, scene, 'images')):
             images_df = images_df.append({'name': image_name,
-                                        'image': cv2.resize(cv2.imread(os.path.join(self.data_path, scene, 'images', image_name)), None,fx=0.1,fy=0.1)}, ignore_index=True)
+                                        'image': cv2.resize(cv2.imread(os.path.join(self.data_path, scene, 'images', image_name)), None,fx=self.img_scale_factor,fy=self.img_scale_factor)}, ignore_index=True)
         return images_df
     
     def get_p_matrices(self, scene):
