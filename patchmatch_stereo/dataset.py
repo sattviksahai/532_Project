@@ -46,7 +46,7 @@ class Dataset:
             with open(os.path.join(self.data_path, scene, 'cameras', image_name), "r") as f:
                 contents = f.read()
                 elements = contents.split()
-                intrinsics_df = intrinsics_df.append({'name': image_name[:-7],
+                rotation_df = rotation_df.append({'name': image_name[:-7],
                                                 'rotation': np.array([float(x) for x in elements[12:21]]).reshape((3,3))}, ignore_index=True)
                 f.close()
         return rotation_df
@@ -58,7 +58,7 @@ class Dataset:
             with open(os.path.join(self.data_path, scene, 'cameras', image_name), "r") as f:
                 contents = f.read()
                 elements = contents.split()
-                intrinsics_df = intrinsics_df.append({'name': image_name[:-7],
+                translation_df = translation_df.append({'name': image_name[:-7],
                                                 'translation': np.array([float(x) for x in elements[21:24]]).reshape((3,1))}, ignore_index=True)
                 f.close()
         return translation_df
