@@ -39,7 +39,29 @@ class Dataset:
                 f.close()
         return intrinsics_df
 
-#add fucntion get extrinsics
+
+    def get_rotation(self, scene):
+        rotation_df = pd.DataFrame(columns=['name', 'rotation'])
+        for image_name in os.listdir(os.path.join(self.data_path, scene, 'cameras')):
+            with open(os.path.join(self.data_path, scene, 'cameras', image_name), "r") as f:
+                contents = f.read()
+                elements = contents.split()
+                intrinsics_df = intrinsics_df.append({'name': image_name[:-7],
+                                                'rotation': np.array([float(x) for x in elements[12:21]]).reshape((3,3))}, ignore_index=True)
+                f.close()
+        return rotation_df
+
+
+    def get_translation(self, scene):
+        translation_df = pd.DataFrame(columns=['name', 'translation'])
+        for image_name in os.listdir(os.path.join(self.data_path, scene, 'cameras')):
+            with open(os.path.join(self.data_path, scene, 'cameras', image_name), "r") as f:
+                contents = f.read()
+                elements = contents.split()
+                intrinsics_df = intrinsics_df.append({'name': image_name[:-7],
+                                                'translation': np.array([float(x) for x in elements[21:24]]).reshape((3,1))}, ignore_index=True)
+                f.close()
+        return translation_df
 
 # modify get_p_matrices to compute from instrinsics and extrinsics
 
