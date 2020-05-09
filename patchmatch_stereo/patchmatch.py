@@ -14,7 +14,7 @@ class PatchMatch:
         self.ref_image = self.images['image'][0]
         self.ref_pmat = self.p_matrices.loc[self.p_matrices['name'] == self.images['name'][0]]['pmat'].values[0]
         self.ref_k = self.intrinsics.loc[self.intrinsics['name'] == self.images['name'][0]]['intrinsics'].values[0]
-        self.ref_r = self.rotations.loc[self.rotations['name'] == self.images['name'][0]]['rotations'].values[0]
+        self.ref_r = self.rotations.loc[self.rotations['name'] == self.images['name'][0]]['rotation'].values[0]
         # initialize random depthmap
         self.depth_lowerlim = 1000
         self.depth_upperlim = 50000
@@ -159,7 +159,7 @@ if __name__ == "__main__":
     f_images = mvs_dataset.get_images('fountain')
     f_p_mats = mvs_dataset.get_p_matrices('fountain')
     f_intrinsics = mvs_dataset.get_intrinsics('fountain')
-    f_rotations = mvs_dataset.get_rotations('fountain')
+    f_rotations = mvs_dataset.get_rotation('fountain')
 
     pm_fountain = PatchMatch(f_images, f_p_mats, f_intrinsics, f_rotations)
     pm_fountain.run(1)

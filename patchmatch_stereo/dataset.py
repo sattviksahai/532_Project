@@ -38,19 +38,6 @@ class Dataset:
                                                 'intrinsics': np.array([float(x) for x in elements[0:9]]).reshape((3,3))}, ignore_index=True)
                 f.close()
         return intrinsics_df
-    
-    def get_rotations(self, scene):
-        intrinsics_df = pd.DataFrame(columns=['name', 'rotations']) # should i be keeping the intrinsics separate? 
-        for image_name in os.listdir(os.path.join(self.data_path, scene, 'cameras')):
-            with open(os.path.join(self.data_path, scene, 'cameras', image_name), "r") as f:
-                contents = f.read()
-                lines = contents.split("\n")
-                elements = contents.split()
-                intrinsics_df = intrinsics_df.append({'name': image_name[:-7],
-                                                'rotations': np.array([float(x) for x in (lines[4]+lines[5]+lines[6]).split()]).reshape((3,3))}, ignore_index=True)
-                f.close()
-        return intrinsics_df
-
 
     def get_rotation(self, scene):
         rotation_df = pd.DataFrame(columns=['name', 'rotation'])
