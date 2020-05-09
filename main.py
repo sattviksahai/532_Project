@@ -8,7 +8,7 @@ if __name__ == "__main__":
     f_images = mvs_dataset.get_images('fountain')
     f_p_mats = mvs_dataset.get_p_matrices('fountain')
     f_intrinsics = mvs_dataset.get_intrinsics('fountain')
+    f_rotations = mvs_dataset.get_rotation('fountain')
 
-    pm_fountain = PatchMatch(f_images, f_p_mats, f_intrinsics)
-
-    pm_fountain.run(10)
+    pm_fountain = PatchMatch(f_images, f_p_mats, f_intrinsics, f_rotations)
+    pm_fountain.run(1)
