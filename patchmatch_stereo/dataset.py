@@ -62,7 +62,7 @@ class Dataset:
                 f.close()
         return translation_df
 
-    def compute_p_matrices(self, scene, rotation_df, translation_df, intrinsics_df, resize_param=1):
+    def compute_p_matrices(self, scene, rotation_df, translation_df, intrinsics_df):
         pmat_df = pd.DataFrame(columns=['name', 'pmat'])
         
         assert(len(intrinsics_df.index) == len(rotation_df.index) == len(translation_df.index))
@@ -71,7 +71,7 @@ class Dataset:
             mat1 = np.transpose(rotation_df['rotation'][i])
             mat2 = np.dot(-np.transpose(rotation_df['rotation'][i]), translation_df['translation'][i])
             mat3 = np.concatenate((mat1, mat2), axis=1)
-            resized_intrinsics = np.multiply(intrinsics_df['intrinsics'][i][0:2], resize_param)
+            resized_intrinsics = np.multiply(intrinsics_df['intrinsics'][i][0:2], self.img_scale_factor)
             resized_intrinsics = np.concatenate((resized_intrinsics, [intrinsics_df['intrinsics'][i][2]]))
             P = np.dot(resized_intrinsics, mat3)
             pmat_df = pmat_df.append({'name': rotation_df['name'][i], 
@@ -91,12 +91,10 @@ if __name__ == "__main__":
     rotation = mvs_dataset.get_rotation('fountain')
     translation = mvs_dataset.get_translation('fountain')
 
-    pmat = mvs_dataset.compute_p_matrices('fountain', rotation, translation, intrinsics, resize_param=1)
+    pmat = mvs_dataset.compute_p_matrices('fountain', rotation, translation, intrinsics)
     print(pmat)
-
 
     entry_images = mvs_dataset.get_images('entry')
     p_mats = mvs_dataset.get_p_matrices('fountain')
-
     print(p_mats)
 
