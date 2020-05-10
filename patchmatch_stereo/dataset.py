@@ -7,7 +7,7 @@ class Dataset:
     def __init__(self, data_path):
         self.data_path = data_path
         self.scenes = os.listdir(self.data_path)
-        self.img_scale_factor = 1.0
+        self.img_scale_factor = 0.5
         print("Detected the following scenes: ", self.scenes)
         print("TODO: remove image resizing from Dataset")
 
@@ -26,7 +26,7 @@ class Dataset:
             pmat_df = pmat_df.append({'name': image_name[:-2],
                                     'pmat': np.array([float(x) for x in contents.split()]).reshape((3,4))}, ignore_index=True)
             f.close()
-        return pmat_df
+        return pmat_df 
     
     def get_intrinsics(self, scene):
         intrinsics_df = pd.DataFrame(columns=['name', 'intrinsics']) # should i be keeping the intrinsics separate? 
@@ -34,8 +34,10 @@ class Dataset:
             with open(os.path.join(self.data_path, scene, 'cameras', image_name), "r") as f:
                 contents = f.read()
                 elements = contents.split()
+                pmat = np.array([float(x) for x in elements[0:9]]).reshape((3,3))
+                pmat[0:2] = np.multiply(pmat[0:2], self.img_scale_factor)
                 intrinsics_df = intrinsics_df.append({'name': image_name[:-7],
-                                                'intrinsics': np.array([float(x) for x in elements[0:9]]).reshape((3,3))}, ignore_index=True)
+                                                'intrinsics': pmat}, ignore_index=True)
                 f.close()
         return intrinsics_df
 
@@ -71,9 +73,9 @@ class Dataset:
             mat1 = np.transpose(rotation_df['rotation'][i])
             mat2 = np.dot(-np.transpose(rotation_df['rotation'][i]), translation_df['translation'][i])
             mat3 = np.concatenate((mat1, mat2), axis=1)
-            resized_intrinsics = np.multiply(intrinsics_df['intrinsics'][i][0:2], self.img_scale_factor)
+            resized_intrinsics = np.multiply(intrinsics_df['intrinsics'][i][0:2], 1.0)
             resized_intrinsics = np.concatenate((resized_intrinsics, [intrinsics_df['intrinsics'][i][2]]))
-            P = np.dot(resized_intrinsics, mat3)
+            P = np.dot(intrinsics_df['intrinsics'][i], mat3)
             pmat_df = pmat_df.append({'name': rotation_df['name'][i], 
                                     'pmat': P}, ignore_index=True)
         return pmat_df
