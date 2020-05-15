@@ -1,9 +1,9 @@
 import os
 import numpy as np
-from dataset import Dataset
+from patchmatch_stereo.dataset import Dataset
 import cv2
 from tqdm import tqdm
-from photoconsistency import SAD, NCC
+from patchmatch_stereo.photoconsistency import SAD, NCC
 
 class PatchMatch:
     def __init__(self, images, p_matrices, intrinsics, rotations, translations):
@@ -39,27 +39,12 @@ class PatchMatch:
                             'bottom_to_top',
                             'left_to_right',
                             'right_to_left']
-        self.window_size = 3
+        self.window_size = 15
 
     def project_to_3d(self, pos, z, K, R, T):
-        # fx = K[0,0]
-        # fy = K[1,1]
-        # cx = K[0,2]
-        # cy = K[1,2]
-
-        # u = pos[0]
-        # v = pos[1]
-        # x = (u-cx)*z/fx
-        # y = (v-cy)*z/fy
-        # ret = np.dot(R,np.array([[x,y,z]]).T) - np.dot(R,T)
-        # print(np.linalg.inv(K))
-        # print(K, R, T)
         temp_x = np.dot(np.linalg.inv(K), np.array([pos[0], pos[1], 1])).reshape(3,1)*z
-        # print(temp_x)
         shifted = temp_x - T
         ret = np.dot(R, shifted)
-        # print(ret)
-        
         return np.array([ret[0],ret[1],ret[2],1])
 
     def project_to_2d(self, pos, P):
@@ -69,7 +54,6 @@ class PatchMatch:
     def project_to(self, loc, depth, K0, R0, T0, P1):
         point_3d = self.project_to_3d(loc, depth, K0, R0, T0)
         point_reprojected = self.project_to_2d(point_3d, P1)
-        # print(point_reprojected)
         return np.array([point_reprojected[1], point_reprojected[0]])
 
     def eval_photoconsistency(self, original_pos, other_img, positions):
@@ -78,12 +62,10 @@ class PatchMatch:
         scores = []
         for pos in positions:
             if (pos is not None) and (int(pos[0])>int(self.window_size/2)) and (int(pos[1])>int(self.window_size/2)) and (int(pos[0])<self.ref_image.shape[0]-int(self.window_size/2)) and (int(pos[1])<self.ref_image.shape[1]-int(self.window_size/2)) and (original_pos[0]>int(self.window_size/2)) and (original_pos[1]>int(self.window_size/2)) and (original_pos[0]<self.ref_image.shape[0]-int(self.window_size/2)) and (original_pos[1]<self.ref_image.shape[1]-int(self.window_size/2)):
-                # print(self.ref_image[original_pos[0]-int(self.window_size/2):original_pos[0]+1+int(self.window_size/2), original_pos[1]-int(self.window_size/2):original_pos[1]+1+int(self.window_size/2)].shape)
                 l1 = int(pos[0])-int(self.window_size/2)
                 h1 = int(pos[0])+int(self.window_size/2)+1
                 l2 = int(pos[1])-int(self.window_size/2)
                 h2 = int(pos[1])+int(self.window_size/2)+1
-                # print(other_img[l1:h1,l2:h2,:].shape)
                 try:
                     scores.append(SAD(self.ref_image[original_pos[0]-int(self.window_size/2):original_pos[0]+1+int(self.window_size/2), original_pos[1]-int(self.window_size/2):original_pos[1]+1+int(self.window_size/2),:], other_img[l1:h1,l2:h2,:]))
                 except:
@@ -130,17 +112,9 @@ class PatchMatch:
                 rand_pos = self.project_to(np.array([j,i,1]), rand_val, self.ref_k, self.ref_r, self.ref_t, self.other_pmat_1)
                 original_pos = self.project_to(np.array([j,i,1]), self.depthmap[i,j], self.ref_k, self.ref_r, self.ref_t, self.other_pmat_1)
                 # project into other image 2 with all depth hypotheses
-                neighbor_pos2 = None
-                rand_pos2 = None
-                original_pos2 = None
-                # neighbor_pos2 = self.project_to(np.array([j,i,1]), neighbor, self.ref_k, self.ref_r, self.ref_t, self.other_pmat_2)
-                # rand_pos2 = self.project_to(np.array([j,i,1]), rand_val, self.ref_k, self.ref_r, self.ref_t, self.other_pmat_2)
-                # original_pos2 = self.project_to(np.array([j,i,1]), self.depthmap[i,j], self.ref_k, self.ref_r, self.ref_t, self.other_pmat_2)
-
-                # test_point = np.array([1467,1931,1])
-                # test_pos = self.project_to(test_point, rand_val, self.ref_k, self.ref_r, self.ref_t, self.other_pmat_1)
-                # print("from:", rand_val, self.ref_name, test_point)
-                # print("to:", self.other_name_1, int(test_pos[0]), int(test_pos[1]))
+                neighbor_pos2 = self.project_to(np.array([j,i,1]), neighbor, self.ref_k, self.ref_r, self.ref_t, self.other_pmat_2)
+                rand_pos2 = self.project_to(np.array([j,i,1]), rand_val, self.ref_k, self.ref_r, self.ref_t, self.other_pmat_2)
+                original_pos2 = self.project_to(np.array([j,i,1]), self.depthmap[i,j], self.ref_k, self.ref_r, self.ref_t, self.other_pmat_2)
 
                 # Step4
                 best_depth = self.eval_photoconsistency((i,j), self.other_image_1, [neighbor_pos, rand_pos, original_pos, neighbor_pos2, rand_pos2, original_pos2])
@@ -165,7 +139,7 @@ if __name__ == "__main__":
     data_path = "data/"
     mvs_dataset = Dataset(data_path)
     
-    scene = 'entry'
+    scene = 'hers-jezu'
     f_images = mvs_dataset.get_images(scene)
     f_intrinsics = mvs_dataset.get_intrinsics(scene)
     f_rotations = mvs_dataset.get_rotation(scene)
