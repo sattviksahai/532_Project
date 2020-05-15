@@ -3,7 +3,7 @@ import numpy as np
 from dataset import Dataset
 import cv2
 from tqdm import tqdm
-from photoconsistency import SAD
+from photoconsistency import SAD, NCC
 
 class PatchMatch:
     def __init__(self, images, p_matrices, intrinsics, rotations, translations):
@@ -29,20 +29,9 @@ class PatchMatch:
         self.other_k_2 = intrinsics['intrinsics'][2]
         self.other_r_2 = rotations['rotation'][2]
         self.other_t_2 = translations['translation'][2]
-
-        ########
-        # self.images = images
-        # self.p_matrices = p_matrices
-        # self.intrinsics = intrinsics
-        # self.rotations = rotations
-        # self.translations = translations
-        # self.ref_image = self.images['image'][0]
-        # self.ref_pmat = self.p_matrices.loc[self.p_matrices['name'] == self.images['name'][0]]['pmat'].values[0]
-        # self.ref_k = self.intrinsics.loc[self.intrinsics['name'] == self.images['name'][0]]['intrinsics'].values[0]
-        # self.ref_r = self.rotations.loc[self.rotations['name'] == self.images['name'][0]]['rotation'].values[0]
-        # self.ref_t = self.translations.loc[self.translations['name'] == self.images['name'][0]]['translation'].values[0]
-        self.depth_lowerlim = 1000
-        self.depth_upperlim = 50000
+        
+        self.depth_lowerlim = 10000
+        self.depth_upperlim = 100000
         self.depthmap = (np.random.rand(images['image'][0].shape[0], images['image'][0].shape[1]) + self.depth_lowerlim)*self.depth_upperlim
         print("TODO: how to set limits for sampling depth?")
         print("TODO: implement get_corresponding_img")
@@ -50,30 +39,37 @@ class PatchMatch:
                             'bottom_to_top',
                             'left_to_right',
                             'right_to_left']
-        # self.other_img = self.images['image'][1]
-        # self.other_p_mat = self.p_matrices.loc[self.p_matrices['name'] == self.images['name'][1]]['pmat'].values[0]
         self.window_size = 3
 
     def project_to_3d(self, pos, z, K, R, T):
-        fx = K[0,0]
-        fy = K[1,1]
-        cx = K[0,2]
-        cy = K[1,2]
+        # fx = K[0,0]
+        # fy = K[1,1]
+        # cx = K[0,2]
+        # cy = K[1,2]
 
-        u = pos[0]
-        v = pos[1]
-        x = (u-cx)*z/fx
-        y = (v-cy)*z/fy
-        ret = np.dot(R,np.array([[x,y,z]]).T) - np.dot(R,T)
+        # u = pos[0]
+        # v = pos[1]
+        # x = (u-cx)*z/fx
+        # y = (v-cy)*z/fy
+        # ret = np.dot(R,np.array([[x,y,z]]).T) - np.dot(R,T)
+        # print(np.linalg.inv(K))
+        # print(K, R, T)
+        temp_x = np.dot(np.linalg.inv(K), np.array([pos[0], pos[1], 1])).reshape(3,1)*z
+        # print(temp_x)
+        shifted = temp_x - T
+        ret = np.dot(R, shifted)
+        # print(ret)
+        
         return np.array([ret[0],ret[1],ret[2],1])
 
     def project_to_2d(self, pos, P):
-        ret = np.dot(P,pos)
+        ret = np.matmul(P,pos)
         return ret/ret[2]
     
     def project_to(self, loc, depth, K0, R0, T0, P1):
         point_3d = self.project_to_3d(loc, depth, K0, R0, T0)
         point_reprojected = self.project_to_2d(point_3d, P1)
+        # print(point_reprojected)
         return np.array([point_reprojected[1], point_reprojected[0]])
 
     def eval_photoconsistency(self, original_pos, other_img, positions):
@@ -81,7 +77,7 @@ class PatchMatch:
         # print(self.ref_image.shape)
         scores = []
         for pos in positions:
-            if (int(pos[0])>int(self.window_size/2)) and (int(pos[1])>int(self.window_size/2)) and (int(pos[0])<self.ref_image.shape[0]-int(self.window_size/2)) and (int(pos[1])<self.ref_image.shape[1]-int(self.window_size/2)) and (original_pos[0]>int(self.window_size/2)) and (original_pos[1]>int(self.window_size/2)) and (original_pos[0]<self.ref_image.shape[0]-int(self.window_size/2)) and (original_pos[1]<self.ref_image.shape[1]-int(self.window_size/2)):
+            if (pos is not None) and (int(pos[0])>int(self.window_size/2)) and (int(pos[1])>int(self.window_size/2)) and (int(pos[0])<self.ref_image.shape[0]-int(self.window_size/2)) and (int(pos[1])<self.ref_image.shape[1]-int(self.window_size/2)) and (original_pos[0]>int(self.window_size/2)) and (original_pos[1]>int(self.window_size/2)) and (original_pos[0]<self.ref_image.shape[0]-int(self.window_size/2)) and (original_pos[1]<self.ref_image.shape[1]-int(self.window_size/2)):
                 # print(self.ref_image[original_pos[0]-int(self.window_size/2):original_pos[0]+1+int(self.window_size/2), original_pos[1]-int(self.window_size/2):original_pos[1]+1+int(self.window_size/2)].shape)
                 l1 = int(pos[0])-int(self.window_size/2)
                 h1 = int(pos[0])+int(self.window_size/2)+1
@@ -133,16 +129,26 @@ class PatchMatch:
                 neighbor_pos = self.project_to(np.array([j,i,1]), neighbor, self.ref_k, self.ref_r, self.ref_t, self.other_pmat_1)
                 rand_pos = self.project_to(np.array([j,i,1]), rand_val, self.ref_k, self.ref_r, self.ref_t, self.other_pmat_1)
                 original_pos = self.project_to(np.array([j,i,1]), self.depthmap[i,j], self.ref_k, self.ref_r, self.ref_t, self.other_pmat_1)
-                # print("from:", np.array([j,i]))
-                # print("to:", neighbor_pos)
+                # project into other image 2 with all depth hypotheses
+                neighbor_pos2 = None
+                rand_pos2 = None
+                original_pos2 = None
+                # neighbor_pos2 = self.project_to(np.array([j,i,1]), neighbor, self.ref_k, self.ref_r, self.ref_t, self.other_pmat_2)
+                # rand_pos2 = self.project_to(np.array([j,i,1]), rand_val, self.ref_k, self.ref_r, self.ref_t, self.other_pmat_2)
+                # original_pos2 = self.project_to(np.array([j,i,1]), self.depthmap[i,j], self.ref_k, self.ref_r, self.ref_t, self.other_pmat_2)
+
+                # test_point = np.array([1467,1931,1])
+                # test_pos = self.project_to(test_point, rand_val, self.ref_k, self.ref_r, self.ref_t, self.other_pmat_1)
+                # print("from:", rand_val, self.ref_name, test_point)
+                # print("to:", self.other_name_1, int(test_pos[0]), int(test_pos[1]))
 
                 # Step4
-                best_depth = self.eval_photoconsistency((i,j), self.other_image_1, [neighbor_pos, rand_pos, original_pos])
+                best_depth = self.eval_photoconsistency((i,j), self.other_image_1, [neighbor_pos, rand_pos, original_pos, neighbor_pos2, rand_pos2, original_pos2])
 
                 # Step5
-                if best_depth == 0:
+                if (best_depth == 0) or (best_depth == 3):
                     self.depthmap[i,j] = neighbor
-                elif best_depth == 1:
+                elif (best_depth == 1) or (best_depth == 4):
                     self.depthmap[i,j] = rand_val
                 # else leave depth as it is
         np.save("depthmaps/depth_{}.npy".format(iteration), self.depthmap)
@@ -158,12 +164,13 @@ if __name__ == "__main__":
     # read dataset
     data_path = "data/"
     mvs_dataset = Dataset(data_path)
-
-    f_images = mvs_dataset.get_images('fountain')
-    f_intrinsics = mvs_dataset.get_intrinsics('fountain')
-    f_rotations = mvs_dataset.get_rotation('fountain')
-    f_translations = mvs_dataset.get_translation('fountain')
-    f_p_mats = mvs_dataset.compute_p_matrices('fountain', f_rotations, f_translations, f_intrinsics)
+    
+    scene = 'entry'
+    f_images = mvs_dataset.get_images(scene)
+    f_intrinsics = mvs_dataset.get_intrinsics(scene)
+    f_rotations = mvs_dataset.get_rotation(scene)
+    f_translations = mvs_dataset.get_translation(scene)
+    f_p_mats = mvs_dataset.compute_p_matrices(scene, f_rotations, f_translations, f_intrinsics)
 
     pm_fountain = PatchMatch(f_images, f_p_mats, f_intrinsics, f_rotations, f_translations)
-    pm_fountain.run(1)
+    pm_fountain.run(10)
